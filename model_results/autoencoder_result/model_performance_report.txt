@@ -1,0 +1,4 @@
+Autoencoder Model Performance Report
+ROC-AUC: 0.9842
+F1-Score: 0.8742
+Anomaly Detection Threshold: 0.0247

@@ -1,0 +1,176 @@
+import os
+import logging
+import numpy as np
+import pandas as pd
+from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.base import BaseEstimator, TransformerMixin
+
+# ------------------------------------------------------------------------------
+# Configuration & Logging
+# ------------------------------------------------------------------------------
+INPUT_DATA_PATH = r"C:\Users\Ken Ira Talingting\Desktop\anomaly-detection-project\data\preprocessing\preprocess_data\train_data.csv"
+OUTPUT_DIR = r"C:\Users\Ken Ira Talingting\Desktop\anomaly-detection-project\data\preprocessing\feature_engineering"
+OUTPUT_DATA_PATH = os.path.join(OUTPUT_DIR, "engineered_train_data_ocsvm.csv")
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
+
+
+# ------------------------------------------------------------------------------
+# Custom Transformer for Additional Feature Engineering
+# ------------------------------------------------------------------------------
+class AdditionalFeatures(BaseEstimator, TransformerMixin):
+    """
+    Transformer to add engineered features such as:
+      - temp_pressure_ratio: temperature divided by pressure.
+      - vibration_humidity_product: product of vibration and humidity.
+    """
+    def __init__(self, epsilon=1e-6):
+        self.epsilon = epsilon  # To avoid division by zero
+
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X, y=None):
+        # Copy DataFrame to avoid modifying original data
+        X_transformed = X.copy()
+        
+        # Create temperature to pressure ratio
+        X_transformed['temp_pressure_ratio'] = X_transformed['temperature'] / (X_transformed['pressure'] + self.epsilon)
+        
+        # Create product of vibration and humidity
+        X_transformed['vibration_humidity_product'] = X_transformed['vibration'] * X_transformed['humidity']
+        
+        return X_transformed
+
+
+# ------------------------------------------------------------------------------
+# Data Loading Function
+# ------------------------------------------------------------------------------
+def load_data(path):
+    """
+    Load the raw CSV data into a pandas DataFrame.
+    """
+    logging.info("Loading data from: %s", path)
+    df = pd.read_csv(path)
+    logging.info("Data shape: %s", df.shape)
+    return df
+
+
+# ------------------------------------------------------------------------------
+# Feature Engineering Function
+# ------------------------------------------------------------------------------
+def feature_engineering(df):
+    """
+    Perform feature engineering optimized for one-class SVM anomaly detection.
+    
+    Steps:
+      1. Fill missing values.
+         - Continuous features: filled with median.
+         - Categorical features: filled with mode.
+      2. Add additional engineered features.
+         - Temperature/Pressure ratio.
+         - Vibration*Humidity product.
+      3. Build a pipeline to:
+         - Scale continuous features.
+         - One-hot encode categorical features.
+         - Include additional engineered features.
+      4. Return a new DataFrame with engineered features (and target preserved).
+    """
+    # Define columns
+    continuous_cols = ['temperature', 'pressure', 'vibration', 'humidity']
+    categorical_cols = ['equipment', 'location']
+    target_col = 'faulty'
+
+    # ------------------------------------------------------------------------------
+    # 1. Fill Missing Values
+    # ------------------------------------------------------------------------------
+    # For continuous features, fill missing values with the median.
+    for col in continuous_cols:
+        if df[col].isnull().sum() > 0:
+            median_val = df[col].median()
+            df[col].fillna(median_val, inplace=True)
+            logging.info("Filled missing continuous values in %s with median: %f", col, median_val)
+            
+    # For categorical features, fill missing values with the mode.
+    for col in categorical_cols:
+        if df[col].isnull().sum() > 0:
+            mode_val = df[col].mode()[0]
+            df[col].fillna(mode_val, inplace=True)
+            logging.info("Filled missing categorical values in %s with mode: %s", col, mode_val)
+            
+    # ------------------------------------------------------------------------------
+    # 2. Add Additional Engineered Features
+    # ------------------------------------------------------------------------------
+    # Apply custom transformer to add new features.
+    add_feat_transformer = AdditionalFeatures()
+    df = add_feat_transformer.transform(df)
+    
+    # Now, update continuous_cols list to include new engineered features.
+    engineered_continuous = continuous_cols + ['temp_pressure_ratio', 'vibration_humidity_product']
+    
+    # ------------------------------------------------------------------------------
+    # 3. Build Preprocessing Pipeline
+    # ------------------------------------------------------------------------------
+    # Pipeline for continuous features: Imputation is already done, so we only scale.
+    continuous_pipeline = Pipeline(steps=[
+        ('scaler', StandardScaler())
+    ])
+    
+    # Pipeline for categorical features: OneHotEncode them.
+    categorical_pipeline = Pipeline(steps=[
+        ('onehot', OneHotEncoder(sparse_output=False, handle_unknown='ignore'))
+    ])
+    
+    preprocessor = ColumnTransformer(transformers=[
+        ('cont', continuous_pipeline, engineered_continuous),
+        ('cat', categorical_pipeline, categorical_cols)
+    ])
+    
+    # Fit and transform the features (do not include the target column).
+    X_transformed = preprocessor.fit_transform(df[engineered_continuous + categorical_cols])
+    
+    # Construct new feature names.
+    cat_feature_names = preprocessor.named_transformers_['cat'].get_feature_names_out(categorical_cols)
+    feature_names = engineered_continuous + list(cat_feature_names)
+    
+    # Create a DataFrame from the transformed features.
+    df_features = pd.DataFrame(X_transformed, columns=feature_names, index=df.index)
+    
+    # Add the target variable back to the DataFrame.
+    df_features[target_col] = df[target_col].values
+
+    logging.info("Feature engineering completed. Engineered data has %d features.", len(feature_names))
+    return df_features
+
+
+# ------------------------------------------------------------------------------
+# Save Engineered Data
+# ------------------------------------------------------------------------------
+def save_engineered_data(df, output_path):
+    """
+    Save the engineered DataFrame as a CSV file.
+    """
+    df.to_csv(output_path, index=False)
+    logging.info("Engineered dataset saved to: %s", output_path)
+
+
+# ------------------------------------------------------------------------------
+# Main Execution
+# ------------------------------------------------------------------------------
+def main():
+    # Load raw data
+    df_raw = load_data(INPUT_DATA_PATH)
+    
+    # Apply feature engineering
+    df_engineered = feature_engineering(df_raw)
+    
+    # Save the engineered dataset for one-class SVM anomaly detection
+    save_engineered_data(df_engineered, OUTPUT_DATA_PATH)
+
+
+if __name__ == '__main__':
+    main()
