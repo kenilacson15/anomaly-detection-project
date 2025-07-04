@@ -1,0 +1,121 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "Preprocess Data",
+        "type": "shell",
+        "command": "python",
+        "args": [
+          "${workspaceFolder}/src/data/preprocess.py"
+        ],
+        "group": "build",
+        "presentation": {
+          "echo": true,
+          "reveal": "always",
+          "focus": false,
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "Feature Engineering",
+        "type": "shell",
+        "command": "python",
+        "args": [
+          "${workspaceFolder}/src/data/feature_engineering.py"
+        ],
+        "group": "build",
+        "presentation": {
+          "echo": true,
+          "reveal": "always",
+          "focus": false,
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "Train Isolation Forest",
+        "type": "shell",
+        "command": "python",
+        "args": [
+          "${workspaceFolder}/notebooks/4a_model_training_isolation_forest.ipynb"
+        ],
+        "group": "test",
+        "presentation": {
+          "echo": true,
+          "reveal": "always",
+          "focus": false,
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "Train One-Class SVM",
+        "type": "shell",
+        "command": "python",
+        "args": [
+          "${workspaceFolder}/notebooks/4b_model_training_one_class_svm.ipynb"
+        ],
+        "group": "test",
+        "presentation": {
+          "echo": true,
+          "reveal": "always",
+          "focus": false,
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "Train Autoencoder",
+        "type": "shell",
+        "command": "python",
+        "args": [
+          "${workspaceFolder}/notebooks/4c_model_training_autoencoder.ipynb"
+        ],
+        "group": "test",
+        "presentation": {
+          "echo": true,
+          "reveal": "always",
+          "focus": false,
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "Run Evaluation",
+        "type": "shell",
+        "command": "python",
+        "args": [
+          "${workspaceFolder}/src/evaluation/evaluate.py"
+        ],
+        "group": "test",
+        "presentation": {
+          "echo": true,
+          "reveal": "always",
+          "focus": false,
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "Run Full Pipeline",
+        "dependsOn": [
+          "Preprocess Data",
+          "Feature Engineering",
+          "Train Isolation Forest",
+          "Train One-Class SVM",
+          "Train Autoencoder",
+          "Run Evaluation"
+        ],
+        "dependsOrder": "sequence",
+        "problemMatcher": [],
+        "presentation": {
+          "echo": true,
+          "reveal": "always",
+          "focus": false,
+          "panel": "shared"
+        }
+      }
+    ]
+  }
+  

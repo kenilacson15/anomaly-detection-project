@@ -1,0 +1,96 @@
+# Global Settings
+seed: 42
+
+# Data Configuration
+data:
+  raw: "data/raw/equipment_anomaly_data.csv"
+  processed: "data/processed/equipment_anomaly_data_processed.csv"
+  feature_engineered: "data/processed/equipment_anomaly_data_feature_engineered.csv"
+  imputer_strategy: "mean"          # Strategy for missing value imputation
+  scaler: "StandardScaler"          # Scaling method to apply to features
+
+# Results and Output Settings
+results:
+  directory: "C:/Users/Ken Ira Talingting/Desktop/anomaly-detection-project/data/processed_results"
+  filenames:
+    isolation_forest: "isolation_forest_model.joblib"
+    one_class_svm:
+      model: "one_class_svm_model.pkl"
+      predictions: "predictions.csv"
+      report: "evaluation_report.txt"
+      plots:
+        confusion_matrix: "confusion_matrix.png"
+        score_distribution: "decision_scores_distribution.png"
+        pca_decision_boundary: "pca_decision_boundary.png"
+    autoencoder:
+      model: "autoencoder_model.h5"
+      predictions: "autoencoder_anomaly_detection_results.csv"
+      metadata: "autoencoder_model_metadata.json"
+      scaler: "scaler.joblib"
+      plots:
+        error_distribution: "reconstruction_error_distribution.png"
+
+# Model Configurations
+models:
+  isolation_forest:
+    n_estimators: 200
+    max_samples: "auto"
+    max_features: 1.0
+    contamination: "auto"           # Dynamically calculated or set explicitly
+    n_jobs: -1
+    verbose: 1
+
+  one_class_svm:
+    type: "OneClassSVM"
+    kernel: "rbf"
+    hyperparameters:
+      nu: [0.01, 0.05, 0.1, 0.2]
+      gamma: ["scale", "auto"]
+
+  autoencoder:
+    architecture:
+      encoding_dim: 8               # Dimensionality of the latent space
+      hidden_layer_multiplier: 2    # Determines hidden layer sizes (e.g., encoding_dim * multiplier)
+    optimizer: "adam"
+    loss: "mse"
+
+# Training Configuration
+training:
+  isolation_forest:
+    cross_validation_folds: 3
+    n_jobs: -1
+    verbose: 1
+
+  one_class_svm:
+    cross_validation_folds: 3
+    n_jobs: -1
+    verbose: 1
+
+  autoencoder:
+    epochs: 50
+    batch_size: 32
+    validation_split: 0.1
+
+# Evaluation Settings
+evaluation:
+  isolation_forest:
+    generate_classification_report: true
+    compute_roc_auc: true
+
+  one_class_svm:
+    best_hyperparameters:
+      gamma: "scale"
+      nu: 0.01
+
+  autoencoder:
+    threshold_quantile: 0.95       # Quantile to determine reconstruction error threshold
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(levelname)s - %(message)s"
+
+# Deployment and Monitoring
+deployment:
+  api_framework: "FastAPI"         # Options: FastAPI, Flask, etc.
+  monitoring_enabled: true
